@@ -23,72 +23,70 @@ type Weights = Matrix R
 type Layer = (Weights, Bias, Activation)
 type NN = [Layer]
 
-type Input = Vector R
-type Output = Vector R
-type Deriv = Vector R
-type Error = Vector R
+type Input = Matrix R
+type Output = Matrix R
+type Deriv = Matrix R
+type Error = Matrix R
+type LearningRate = Double
 
-repTrain :: Int -> LearningRate -> [(Input, Output)] -> NN -> NN
-repTrain 0 _ _ nn = nn
-repTrain n lr ios nn = repTrain (n-1) lr ios (train lr ios nn)
-
-train :: LearningRate -> [(Input, Output)] -> NN -> NN
-train lr ios net = foldl (\nn (i,o) -> backprop lr i o nn) net ios
+repTrain :: Int -> LearningRate -> Input -> Output -> NN -> NN
+repTrain 0 _ _ _ nn = nn
+repTrain n lr x y nn = repTrain (n-1) lr x y (backprop lr x y nn)
     
 buildNetwork :: Activation -> [Int] -> IO NN
 buildNetwork act (a:b:xs) = do
-  weights <- randn b a
-  bias    <- randn b 1
+  weights <- randn a b
+  bias    <- randn 1 b
   rest    <- buildNetwork act (b:xs)
   return $ (weights, bias, act):rest
 buildNetwork _ _ = return []
 
 forward :: NN -> Input -> Output
-forward net x = fst $ forwardWithDeriv x net
+forward = (fst .) . flip feedForward
 
-layerForward :: Input -> Layer -> (Output, (Input, Deriv))
-layerForward x (w, b, act) = (output, (x, deriv))
+feedForward :: Input -> NN -> (Output, [(Input, Deriv)])
+feedForward = mapAccumL activateLayer
+
+activateLayer :: Input -> Layer -> (Output, (Input, Deriv))
+activateLayer input (wh, bh, act) = (output, (input, deriv))
   where
-    output = (activate act . (+) b . (<>) w . asColumn) x
-    deriv = cmap (snd act) output
-
-forwardWithDeriv :: Input -> NN -> (Output, [(Input, Deriv)])
-forwardWithDeriv = mapAccumL layerForward
-
-activate :: Activation -> Matrix R -> Vector R
-activate act = flatten . cmap (fst act)
+    output = cmap (fst act) ((input <> wh + bh))
+    deriv  = cmap (snd act) output
 
 backprop :: LearningRate -> Input -> Output -> NN -> NN
 backprop lr input y net = backpropLayers lr error inpDs net
    where
-     (output, inpDs) = forwardWithDeriv input net
+     (output, inpDs) = feedForward input net
      error = y - output
 
 backpropLayers :: LearningRate -> Error -> [(Input, Deriv)] -> NN -> NN
-backpropLayers lr error inpDs weights = snd $ mapAccumR (backpropLayerTuple lr) error (zip inpDs weights)
+backpropLayers lr error inpDs = snd . mapAccumR (backpropMatrix lr) error . zip inpDs
+--  = ((snd . mapAccumR (backpropMatrix lr) error .) . zip) inpDs
 
-backpropLayerTuple :: LearningRate -> Error -> ((Input, Deriv), Layer) -> (Error, Layer)
-backpropLayerTuple lr error (inpD, layer_weights) = backpropLayer lr error inpD layer_weights
-
-type LearningRate = Double
-
-backpropLayer :: LearningRate -> Error -> (Input, Deriv) -> Layer -> (Error, Layer)
-backpropLayer lr error (layer_inp, layer_deriv) layer = (prev_error, new_layer)
+backpropMatrix :: LearningRate -> Matrix R -> ((Matrix R, Matrix R), Layer) -> (Error, Layer)
+backpropMatrix lr error (inputInfo, layer) = (prev_error, new_layer)
   where
     (layer_weights, layer_bias, act) = layer
-    new_layer = (updated_weights, new_bias, act)
-    
-    d_layer = layer_deriv * error
-    updated_weights = (+) layer_weights $ cmap (* lr) ((asColumn d_layer) <> (asRow layer_inp))
-    prev_error = flatten $ (<>) (tr layer_weights) (asColumn d_layer)
-    new_bias = (+) layer_bias . asColumn . cmap (* lr) $ d_layer
-    
+    (layer_inp, layer_deriv) = inputInfo
+    new_layer = (new_weights, new_bias, act)
 
+    d_layer = layer_deriv * error
+    new_weights = (+) layer_weights $ cmap (* lr) $ (tr layer_inp) <> d_layer
+    new_bias = (+) layer_bias $ cmap (* lr) $ asRow $ vector $ map sumElements $ toColumns d_layer
+
+    prev_error = d_layer <> (tr layer_weights)
+    
 sigmoid :: Double -> Double
 sigmoid x = 1.0 / (1 + exp (-x))
 
 sigmoid' :: Double -> Double
 sigmoid' x = x * (1 - x)
+
+relu :: Double -> Double
+relu = max 0
+
+relu' :: Double -> Double
+relu' x = if x >=0 then 1 else 0
 
 printNet :: NN -> IO ()
 printNet layers = do
