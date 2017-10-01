@@ -1,96 +1,79 @@
 module Lib
-    -- ( buildNetwork
-    -- , forward
-    -- , forwardWithDeriv
-    -- , backprop
-    -- , backpropLayer
-    -- , sigmoid
-    -- , sigmoid'
-    -- , printNet
-    -- , repTrain
-    -- , train
-    -- )
-    where
+  (
+    trainNetwork
+  , classifyTest
+  , generateExps
+  , runExperiment
+  , runExpsIO
+  , runExpIO
+  ) where
 
 import Numeric.LinearAlgebra
-import Data.Traversable
 
-type ActivationF = Double -> Double
-type ActivationD = Double -> Double
-type Activation = (ActivationF, ActivationD)
-type Bias = Matrix R
-type Weights = Matrix R
-type Layer = (Weights, Bias, Activation)
-type NN = [Layer]
+import Net
+import CSVMatrixParser
 
-type Input = Matrix R
-type Output = Matrix R
-type Deriv = Matrix R
-type Error = Matrix R
+import Data.List
+import Text.Printf
+
 type LearningRate = Double
+type Epochs = Int
+type HiddenUnits = Int
+type Sigmoid = Bool
 
-repTrain :: Int -> LearningRate -> Input -> Output -> NN -> NN
-repTrain 0 _ _ _ nn = nn
-repTrain n lr x y nn = repTrain (n-1) lr x y (backprop lr x y nn)
-    
-buildNetwork :: Activation -> [Int] -> IO NN
-buildNetwork act (a:b:xs) = do
-  weights <- randn a b
-  bias    <- randn 1 b
-  rest    <- buildNetwork act (b:xs)
-  return $ (weights, bias, act):rest
-buildNetwork _ _ = return []
+data Experiment = Experiment LearningRate Epochs HiddenUnits Sigmoid deriving (Show, Eq)
 
-forward :: NN -> Input -> Output
-forward = (fst .) . flip feedForward
+latexExp :: Experiment -> String
+latexExp (Experiment lr e hu s) = show hu ++ " & " ++ show e ++ " & "
+                                  ++ (printf "%.3f" lr :: String) ++ " & " ++ (if s then "Sigmoid" else "Tanh")
+                                
 
-feedForward :: Input -> NN -> (Output, [(Input, Deriv)])
-feedForward = mapAccumL activateLayer
+latexResults :: [Double] -> String
+latexResults results = foldl (\str r -> str ++ " & " ++ (printf "%.2f" (100 * r) :: String) ++ "\\%") "" results
+                             
+generateExps :: [LearningRate] -> [Epochs] -> [HiddenUnits] -> [Sigmoid] -> [Experiment]
+generateExps lrs es hus ss = [Experiment lr e hu s | lr <- lrs, e <- es, hu <- hus, s <- ss]
 
-activateLayer :: Input -> Layer -> (Output, (Input, Deriv))
-activateLayer input (wh, bh, act) = (output, (input, deriv))
-  where
-    output = cmap (fst act) ((input <> wh + bh))
-    deriv  = cmap (snd act) output
+runExpIO :: String -> [String] -> Experiment -> IO ()
+runExpIO trainData testData exp = do
+  results1 <- runExperiment trainData testData exp
+  results2 <- runExperiment trainData testData exp
+  results3 <- runExperiment trainData testData exp
+  let avgResults = zipWith3 (\a b c -> (a + b + c) / 3.0) results1 results2 results3
+  putStrLn (latexExp exp ++ latexResults avgResults ++ "\\\\")
 
-backprop :: LearningRate -> Input -> Output -> NN -> NN
-backprop lr input y net = backpropLayers lr error inpDs net
-   where
-     (output, inpDs) = feedForward input net
-     error = y - output
+runExpsIO :: String -> [String] -> [Experiment] -> IO ()
+runExpsIO trainData testData = mapM_ (runExpIO trainData testData)
+  
+runExperiment :: String -> [String] -> Experiment -> IO [Double]
+runExperiment trainData testData (Experiment lr e hu s)  = do
+  network <- trainNetwork trainData lr e hu s
+  sequence $ map (classifyTest network) testData
 
-backpropLayers :: LearningRate -> Error -> [(Input, Deriv)] -> NN -> NN
-backpropLayers lr error inpDs = snd . mapAccumR (backpropMatrix lr) error . zip inpDs
---  = ((snd . mapAccumR (backpropMatrix lr) error .) . zip) inpDs
+trainNetwork :: String -> LearningRate -> Epochs -> HiddenUnits -> Sigmoid -> IO NN
+trainNetwork trainingData lr epochs nh isSigmoid = do
+  let (f, f') = if isSigmoid then (sigmoid, sigmoid') else (tanh, tanh')
+  (i,o) <- getData trainingData
+  net   <- buildNetwork (f,f') [5,nh,2]
+  return $ repTrain epochs lr i o net
 
-backpropMatrix :: LearningRate -> Matrix R -> ((Matrix R, Matrix R), Layer) -> (Error, Layer)
-backpropMatrix lr error (inputInfo, layer) = (prev_error, new_layer)
-  where
-    (layer_weights, layer_bias, act) = layer
-    (layer_inp, layer_deriv) = inputInfo
-    new_layer = (new_weights, new_bias, act)
+classifyTest :: NN -> String -> IO Double
+classifyTest net testData = do
+  (i,o) <- getData testData
+  let output = forward net i
+      testRows = toRows o
+      expRows = toRows output
+      testClass = map classification testRows
+      expClass = map classification expRows
+      correct = zipWith xnor testClass expClass
+      numCorrect = length $ filter id correct
+      percentageCorrect = (fromIntegral numCorrect) / (fromIntegral $ length correct)
+  return percentageCorrect
+  
+classification :: Vector R -> Bool
+classification vec = vec ! 0 < 0.5 && vec ! 1 > 0.5
 
-    d_layer = layer_deriv * error
-    new_weights = (+) layer_weights $ cmap (* lr) $ (tr layer_inp) <> d_layer
-    new_bias = (+) layer_bias $ cmap (* lr) $ asRow $ vector $ map sumElements $ toColumns d_layer
-
-    prev_error = d_layer <> (tr layer_weights)
-    
-sigmoid :: Double -> Double
-sigmoid x = 1.0 / (1 + exp (-x))
-
-sigmoid' :: Double -> Double
-sigmoid' x = x * (1 - x)
-
-relu :: Double -> Double
-relu = max 0
-
-relu' :: Double -> Double
-relu' x = if x >=0 then 1 else 0
-
-printNet :: NN -> IO ()
-printNet layers = do
-  mapM_ (\(w,b,_) -> do
-            disp 2 w
-            disp 2 b) layers
-                 
+xnor :: Bool -> Bool -> Bool
+xnor True True = True
+xnor False False = True
+xnor _ _ = False
