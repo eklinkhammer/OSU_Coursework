@@ -24,17 +24,18 @@ class Perceptron(object):
         if not num_features == ys.shape[0]:
             raise "All data must be labeled."
 
-        error = ys - self.predict(xs)
+        error = np.transpose(ys - np.reshape(self.predict(xs),ys.shape))
+
         self.w += self.lr * np.dot(error,xs)
-        
+
     def predict(self, xs):
         output = np.dot(xs, self.w)
-        return np.vectorize(self.f)(output)
+        return np.reshape(np.vectorize(self.f)(output),(len(xs[:,0]),1))
 
 
     # Indicator of if perceptron corectly classified output
     def f(self,x):
-        return 1 if x >= 0 else -1
+        return 1.0 if x >= 0 else -1.0
 
     
     def predict_single(self, x):
@@ -50,25 +51,30 @@ class Perceptron(object):
     def naive_average_train(self, xs, ys, maxIter=None):
         c = 0
         wp = np.zeros(self.dims)
-
-        while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)): 
+        i = 0
+        while(self.test(xs,ys) != 1 and (maxIter is not None and i < maxIter)): 
+            
             for x,y in zip(xs,ys):
                 c += 1
                 if self.predict_single(x)*y <= 0:
                     self.w += self.lr * y * x
                 wp += self.w
+            i += 1
         self.w = wp / c
 
     def average_train(self, xs, ys, maxIter=None):
         c = 0
         wa = np.zeros(self.dims)
-        
-        while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)):
+        i = 0
+        while(self.test(xs,ys) != 1 and (maxIter is not None and i < maxIter)):
+            print "iteration: ", i
             for x, y in zip(xs,ys):
-                c += 1                
-                if self.predict_single(x)*y <= 0:
+                c += 1
+                if self.predict_single(x)*y <= 0:                  
                     self.w += self.lr * y * x
                     wa += c * self.lr * y * x
+            i += 1
+
         self.w -= wa / c
 
     def train_mira(self, x, y):
@@ -79,14 +85,17 @@ class Perceptron(object):
     def train_mira_average(self, xs, ys, maxIter=None):
         c = 0
         wp = np.zeros(self.dims)
-
-        while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)): 
+        i = 0
+        while(self.test(xs,ys) != 1 and (maxIter is not None and i < maxIter)): 
+            
             for x,y in zip(xs,ys):
                 c += 1
                 dotp = np.inner(x, self.w)
                 if dotp*y <= self.mira_margin:
                     self.w = self.w + self.lr * (y - dotp) * x / self.square_norm(x)
                 wp += self.w
+            i += 1
+
         self.w = wp / c
         
     # Returns the classification percentage on the output data
@@ -94,7 +103,7 @@ class Perceptron(object):
         if len(output_data) == 0:
             return 1
 
-        return np.sum(self.predict(input_data) == output_data) / len(output_data)
+        return np.sum(self.predict(input_data) == (output_data)) / (1.0 * len(output_data))
         
             
     def safe_norm(self):
