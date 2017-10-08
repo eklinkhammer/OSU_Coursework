@@ -26,7 +26,7 @@ class Perceptron(object):
 
         error = ys - self.predict(xs)
         self.w += self.lr * np.dot(error,xs)
-
+        
     def predict(self, xs):
         output = np.dot(xs, self.w)
         return np.vectorize(self.f)(output)
@@ -52,8 +52,8 @@ class Perceptron(object):
         wp = np.zeros(self.dims)
 
         while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)): 
-            c += 1
             for x,y in zip(xs,ys):
+                c += 1
                 if self.predict_single(x)*y <= 0:
                     self.w += self.lr * y * x
                 wp += self.w
@@ -64,8 +64,8 @@ class Perceptron(object):
         wa = np.zeros(self.dims)
         
         while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)):
-            c += 1
             for x, y in zip(xs,ys):
+                c += 1                
                 if self.predict_single(x)*y <= 0:
                     self.w += self.lr * y * x
                     wa += c * self.lr * y * x
@@ -81,8 +81,8 @@ class Perceptron(object):
         wp = np.zeros(self.dims)
 
         while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)): 
-            c += 1
             for x,y in zip(xs,ys):
+                c += 1
                 dotp = np.inner(x, self.w)
                 if dotp*y <= self.mira_margin:
                     self.w = self.w + self.lr * (y - dotp) * x / self.square_norm(x)
