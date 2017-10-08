@@ -1,0 +1,6 @@
+README.rst
+HW1.egg-info/PKG-INFO
+HW1.egg-info/SOURCES.txt
+HW1.egg-info/dependency_links.txt
+HW1.egg-info/requires.txt
+HW1.egg-info/top_level.txt
