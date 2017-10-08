@@ -4,7 +4,7 @@ class Perceptron(object):
     def __init__(self, learning_rate=1, input_data=None, output_data=None,
                  feature_size=None, mira_aggro=0):
         self.lr = learning_rate
-        self.mira = mira_aggro
+        self.mira_margin = mira_aggro
         
         if feature_size is not None:
             self.dims = feature_size
@@ -47,11 +47,11 @@ class Perceptron(object):
             self.w += self.lr * y * x
 
 
-    def naive_average_train(self, xs, ys):
+    def naive_average_train(self, xs, ys, maxIter=None):
         c = 0
         wp = np.zeros(self.dims)
 
-        while(self.test(xs,ys) != 1): 
+        while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)): 
             c += 1
             for x,y in zip(xs,ys):
                 if self.predict_single(x)*y <= 0:
@@ -59,11 +59,11 @@ class Perceptron(object):
                 wp += self.w
         self.w = wp / c
 
-    def average_train(self, xs, ys):
+    def average_train(self, xs, ys, maxIter=None):
         c = 0
         wa = np.zeros(self.dims)
         
-        while(self.test(xs,ys) != 1):
+        while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)):
             c += 1
             for x, y in zip(xs,ys):
                 if self.predict_single(x)*y <= 0:
@@ -73,9 +73,22 @@ class Perceptron(object):
 
     def train_mira(self, x, y):
         dotp = np.inner(x, self.w)
-        if dotp*y <= self.mira:
+        if dotp*y <= self.mira_margin:
             self.w = self.w + self.lr * (y - dotp) * x / self.square_norm(x)
-            
+
+    def train_mira_average(self, xs, ys, maxIter=None):
+        c = 0
+        wp = np.zeros(self.dims)
+
+        while(self.test(xs,ys) != 1 or (maxIter is not None and c > maxIter)): 
+            c += 1
+            for x,y in zip(xs,ys):
+                dotp = np.inner(x, self.w)
+                if dotp*y <= self.mira_margin:
+                    self.w = self.w + self.lr * (y - dotp) * x / self.square_norm(x)
+                wp += self.w
+        self.w = wp / c
+        
     # Returns the classification percentage on the output data
     def test(self, input_data, output_data):
         if len(output_data) == 0:

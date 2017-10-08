@@ -28,9 +28,9 @@ def main():
     perceptron.reset()
     perceptron.average_train(xs, ys)
     print(perceptron.test(xs,ys))
-    print ("Naive average")
+    print ("Naive average (with maximum iterations)")
     perceptron.reset()
-    perceptron.naive_average_train(xs, ys)
+    perceptron.naive_average_train(xs, ys, maxIter=10)
     print(perceptron.test(xs,ys))
 
     print ("MIRA")
@@ -39,6 +39,12 @@ def main():
         for i in range(4):
             mira.train_mira(xs[i], ys[i])
 
+    print(mira.test(xs,ys))
+
+
+    print ("MIRA Average")
+    mira.reset()
+    mira.train_mira_average(xs,ys)
     print(mira.test(xs,ys))
     
 if __name__ == "__main__":
