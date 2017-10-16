@@ -23,6 +23,7 @@ library
                      , cassava
                      , bytestring
                      , mtl
+                     , neural-algorithms
   default-language:    Haskell2010
 
 executable HW2-exe
