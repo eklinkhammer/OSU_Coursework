@@ -1,0 +1,28 @@
+Question 3
+For a single epoch, naivly took 0.21 seconds and smartly took 0.19. That is line with both having to do the same dot produt check. The only difference is a single vector addition, which won't dominate total time (time() does not give us anything more granular, like CPU time). It is possible the difference could be greater if we had access to GPUs / more pipelining.
+Question 4:
+  Best error rate on dev: 17.7%
+  Epoch: 1.69 (starting from 0)
+
+Question 5:
+  Best/Worst 
+Best:
+  Doctorate / 76 (assuming hours)
+  74 (assuming hours) / Married-AF-spouse / Prof-school / exec-managerial / masters
+Worst:
+  1. Being 20 (possibly 20 hours) / Being 88 (again, possibly hours worked)
+  3. Working without pay
+  4. Working 3 hours / week / 7th/8th grad education / 25 (hours / age?) / Being from Vietnam
+  
+There were ties. Here is the raw data. (format: (weight, (<ignore>, label))
+  (6.0, (2, ' Masters')), (6.0, (2, ' Prof-school')), (6.0, (7, ' 75')), (6.0, (0, '54')), (6.0, (4, ' Exec-managerial')), (6.0, (3, ' Married-AF-spouse')), (6.0, (0, '74')), (7.0, (7, ' 76')), (7.0, (2, ' Doctorate'))
+  
+  (-10.0, (0, '20')), (-10.0, (0, '88')), (-7.0, (1, ' Without-pay')), (-6.0, (7, ' 3')), (-6.0, (2, ' 7th-8th')), (-6.0, (7, ' 25')), (-6.0, (8, ' Vietnam'))
+
+
+  5b: Both are negatively weighted because the median man and women both earn less than 50k. Controlled for education, hours worked, and profession, you would not expect to see any difference, you Marxist.
+
+Experiment 1:
+  The new error rate is: 77%
+  Shuffling restores the effectiveness of training
+
