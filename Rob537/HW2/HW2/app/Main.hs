@@ -49,16 +49,23 @@ main = do
       stat_runs = read (args !! 2) :: Int
 
   cities <- getCSV csv
-  let sol = [0..(length cities - 1)]
-  results <- replicateM stat_runs (expr runs cities sol)
+  putStrLn $ show cities
+  
+  --let sol = [0..(length cities - 1)]
+  --results <- replicateM stat_runs (expr runs cities sol)
 
-  let scores = map snd results
-      m = mean scores
-      med = median scores
-      std = stddev scores
-
-  putStrLn $ "Finished experiment. Ran " ++ (show stat_runs) ++ " statistical runs."
-  putStrLn $ "Mean: " ++ (show m)
-  putStrLn $ "Median: " ++ (show med)
-  putStrLn $ "Stddev: " ++ (show std)
-  putStrLn $ "Minimum: " ++ (show (minimum scores))
+  --let scores = map snd results
+  --    m = mean scores
+  --    med = median scores
+  --    std = stddev scores
+  --    conf = 1.96 * std / (sqrt (fromIntegral stat_runs))
+  --    lower = m - conf
+  --    upper = m + conf
+  --putStrLn $ "Finished experiment. Ran " ++ (show stat_runs) ++ " statistical runs."
+  --putStrLn $ "Mean: " ++ (show m)
+  --putStrLn $ "Median: " ++ (show med)
+  --putStrLn $ "Stddev: " ++ (show std)
+  --putStrLn $ "Minimum: " ++ (show (minimum scores))
+  --putStrLn $ "95 percent Confidence Interval: " ++ (show conf)
+  --putStrLn $ "Lower interval: " ++ (show lower)
+  --putStrLn $ "Upper interval: " ++ (show upper)
