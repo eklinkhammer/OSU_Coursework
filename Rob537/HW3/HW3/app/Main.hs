@@ -21,6 +21,27 @@ repF n t f = do
   (_, rs) <- repHelper 0 n t f
   return (0:rs)
 
+testQ :: Int -> QTable -> IO Double
+testQ n table = do
+  s <- randomRIO (0,49)
+  testQH n s table
+  
+testQH :: Int -> State -> QTable -> IO Double
+testQH 0 _ _     = return 0
+testQH n s table = do
+  action <- eGreedySelect 0.1 table s
+  let nextS = transition s action
+      reward = gridWorld s action
+  if reward == 100 then return 100
+    else (testQH (n-1) nextS table) >>= return . (+) reward
+
+valueTrain :: Int -> Int -> QTable -> IO [Double]
+valueTrain 0 _ _ = return []
+valueTrain numE numS table = do
+  reward <- testQ numS table
+  let table' = valueIteration 0.5 table
+  (valueTrain (numE - 1) numS table') >>= return . (:) reward
+  
 trainQ :: Int -> Int -> QTable -> ActSelect -> IO (QTable, [Double])
 trainQ 1 numS t f = do
   (t', total) <- repFG numS t f
@@ -75,21 +96,24 @@ main = do
   let gActions = [1,2,3,4,5]
       states = [0..49]
       stateAction = [(s,a) | s <- states, a <- gActions]
-      qtableG = foldr (\x t -> update 0.1 x 0 t) M.empty stateAction
-      
+      qtableG = foldr (\x t -> update 0.1 x 1 t) M.empty stateAction
+
+  trials <- replicateM 100 (valueTrain 10 20 qtableG)
+  putStrLn $ show (averageLists trials)
+
   --putStrLn $ show newTable
   --putStrLn $ show (greedySelect newTable 0)
   
   -- putStrLn $ show t
 
-  trials_ng <- replicateM 1000 (repF 10 qtable greedyIO)
-  trials_ne <- replicateM 1000 (repF 10 qtable (eGreedySelect 0.1))
+  -- trials_ng <- replicateM 50 (repF 100 qtable greedyIO)
+  -- trials_ne <- replicateM 50 (repF 100 qtable (eGreedySelect 0.1))
 
 
-  result <- replicateM 1000 (trainQ 1000 20 qtableG (eGreedySelect 0.25))
-  let rewards = map snd result
-      avgGroup = map (windowAvg 50) rewards
-  putStrLn $ show (averageLists avgGroup)
+  -- --result <- replicateM 10 (trainQ 5000 20 qtableG (eGreedySelect 0.1))
+  -- --let rewards = map snd result
+  -- --    avgGroup = map (windowAvg 250) rewards
+  -- --putStrLn $ show (averageLists avgGroup)
 
-  putStrLn $ show (averageLists trials_ng)
-  putStrLn $ show (averageLists trials_ne)
+  -- putStrLn $ show (averageLists (map (windowAvg 10) trials_ng))
+  -- putStrLn $ show (averageLists (map (windowAvg 10) trials_ne))

@@ -11,12 +11,17 @@ module Lib
     , transition
     , trainGrid
     , greedyIO
+    , valueIteration
+    , gridWorld
+    , valueUpdate
     ) where
 
 import qualified Data.Map.Strict as M
 import System.Random
 import Data.Random.Normal
 import System.Random.Shuffle
+import Data.Foldable
+import Data.List
 
 type Action = Int
 type State = Int
@@ -73,6 +78,19 @@ transition s 2 = if s == 9 || s == 19 || s == 29 || s == 39 || s == 49 then s el
 transition s 3 = if s > 39 then s else s + 10
 transition s 4 = if s == 0 || s == 10 || s == 20 || s == 30 || s == 40 then s else s - 1
 transition s 5 = s
+
+valueIteration :: LearningRate -> QTable -> QTable
+valueIteration lr qtable = foldr (valueUpdate lr) qtable (M.keys qtable)
+
+valueUpdate :: LearningRate -> Pair -> QTable -> QTable
+valueUpdate lr (s,a) qtable = 
+  let nextState = transition s a
+      pairsAtNextState = filter (\(s',_) -> s' == nextState) (M.keys qtable)
+      valsAtNextState = map (\p -> qtable M.! p) pairsAtNextState
+      maxQ = maximum valsAtNextState
+      reward = gridWorld s a
+  in update lr (s,a) (0.9 * maxQ + reward) qtable
+
 
 trainGrid
   :: LearningRate
