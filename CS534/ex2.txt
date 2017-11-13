@@ -1,0 +1,58 @@
+Two formulations of SVM
+1) Maximize 1/|w| = geometric margin (same constraint as below)
+2) Minimize weight norm = min w 1/2 |w|^2 st Vx,y in D, y(w*x) >= 1
+
+2
+Replacing the required functional margin with a larger number will scale the weight vector (does not affect the ability to find a solution).
+
+Requiring the geometic margin to be at least 1 means the data must be linearly separable. If it is not a minimization problem, it will not converge.
+
+3. A support vector is on the decision boundary.
+A 1 d point is defined by one point. A 2d space is separable by a line, which is determined by two points. A 3d space is separable by a plane, which requires at least three support vectors.
+
+However, an increasing number of dimensions does not mean that the number of support vectors is increasing - it is possible to have many points, but have only two examples be on the decision boundary.
+
+4. Mostly True. If an example has a functional margin of 1, it is on the decision boundary. If you define support vectors has all points on the decision boundary, then it is true that hte example is a support vector. However, the set of support vectors could also be considered the minimum set of examples needed, in which case the answer could be false if the example does not add information.
+
+   5. False. If an example is in the support vector set, then it has a minimal geometric distance to the separating hyperplane. That does not mean that it has a functional margin of 1.
+
+5. Convex hull is an expensive algorithm to run in high dimensions, and faster algorithms exist that can solve SVM.
+
+6. Minibatch update MIRA
+
+7. The support vectors of perceptron are the set of examples that have nonzero weight in the resulting weight vector (ie, if the weight vector is a linear combination of examples, the support vectors are the ones positively counted). In theory, every example can produce an error and be counted as a support vector.
+
+8. Convex optimization is easier because you can follow the gradient, and local minimum are also the global minimum.
+
+9. All linear problems are instances of convex optimization. Quadratic functions are also convex functions. If the function is not strictly quaddratic (but is dominated by such) then there will be a region where the other function dominates, and potentially non-convex regions. SVM is a convex optimization problem because it is minimizing a nrom (which is a convex function).
+
+10.
+
+min x^2 such that 1<=n<=2
+
+x^2 - l(x-2) - g(1-x)
+
+2x + l - g = 0
+
+x <= 1 is active
+
+11. Complementary slackness
+Assuming strong dualtiy holds (meaning that the optimimum points of the original and the dual problem are the same). The two problems have differing constraints (ie, in your maximization problem (c^Tx) you are subject to constraints such that Ax <= b, and in your minimization (y^Tb) there is a constraint on y >= 0 and A^Ty = c. If one side is equality, then the other side must be an inequality. You can't satisfy both problems with equality (and you must satisfy both inequalities), so
+
+DEBRIEF SECTION (required)
+
+1. Did you work alone, or did you discuss with other students? 
+   If the latter please write down their names. 
+   Note: in general, only high-level discussions are allowed.
+Alone
+2. How many hours did you spend on this assignment?
+< 1 hour (I did this on the road. My understanding of optimization is shaky.
+
+3. Would you rate it as easy, moderate, or difficult?
+Moderate
+
+4. Are the lectures too fast, too slow, or just in the right pace?
+Too slow. 
+
+5. Any other comments?
+I really appreciate geometric interpretations and a mathmatecal intution. More basic concepts can be learned on your own (and I think that preparing for lectures by reading ahead is a reasonable expectation.

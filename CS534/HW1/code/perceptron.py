@@ -118,6 +118,11 @@ class Perceptron(object):
         if len(output_data) == 0:
             return 1
 
+        for x,y in zip(input_data, output_data):
+            if self.predict_single(x) != y:
+                print (x)
+                print (y)
+                
         return np.sum(self.predict(input_data) == (output_data)) / (1.0 * len(output_data))
         
             

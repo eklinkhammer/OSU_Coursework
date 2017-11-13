@@ -9,6 +9,8 @@ module Lib
     , swapSuccessor
     , runSimAnnealing
     , getCSV
+    , runEA
+    , epsilonGreedy
     ) where
 
 import System.Random
@@ -16,13 +18,20 @@ import System.Random.Shuffle
 import qualified Data.Vector as V
 import qualified Data.ByteString.Lazy as BL
 import Data.Csv
+import Control.Monad
+import Data.List
+
+import CCEA
 
 type Solution = [Int]
 
 type Cities = V.Vector Location
 type Temperature = Double
 newtype Location = Location (Double, Double)
-  deriving (Eq, Show)
+  deriving (Eq)
+
+instance Show Location where
+  show (Location (x,y)) = show (x,y)
 
 instance Num Location where
   (+) (Location (x,y)) (Location (a,b)) = Location (x+a, y+b)
@@ -35,6 +44,26 @@ instance Num Location where
 runSimAnnealing :: Int -> Cities -> Solution -> IO Solution
 runSimAnnealing n cities sol = simulatedAnnealing n cities n 100 sol
 
+runEA :: Int -> Cities -> IO Solution
+runEA n cities = do
+  ea <- getEA cities
+  gen <- getStdGen
+  let (EA pop _ _ _) = snd $ evolveN n gen ea
+      result = sortOn (eval cities) pop
+  return $ head result
+
+epsilonGreedy :: Int -> Double -> Cities -> Solution -> IO Solution
+epsilonGreedy 0 _ _ sol = return sol
+epsilonGreedy n eps cities sol = do
+  potentialCities <- replicateM 50 (swapSuccessorIO sol)
+  let bestRoute = head $ sortOn (eval cities) potentialCities
+
+  p <- randomIO :: IO Double
+  let nextSol = if eval cities bestRoute < eval cities sol
+                then bestRoute
+                else if p < eps then bestRoute else sol
+  epsilonGreedy (n-1) eps cities nextSol
+
 simulatedAnnealing :: Int -> Cities -> Int -> Temperature -> Solution -> IO Solution
 simulatedAnnealing _ _ 0 _ sol = return sol
 simulatedAnnealing k cities n t sol = do
@@ -46,7 +75,7 @@ nextT k t = t * (0.95 ** (fromIntegral k))
   
 nextS :: Cities -> Temperature -> Solution -> IO Solution
 nextS cities t sol = do
-  potential <- swapSuccessor sol
+  potential <- swapSuccessorIO sol
   
   let p = prob t score pot_score
       pot_score = eval cities potential
@@ -67,16 +96,37 @@ successor solution = do
   gen <- getStdGen
   return $ shuffle' solution (length solution) gen
 
-swapSuccessor :: Solution -> IO Solution
-swapSuccessor solution = do
+swapSuccessorIO :: Solution -> IO Solution
+swapSuccessorIO solution = do
   pos  <- randomRIO (0, max 0 $ length solution - 1)
   next <- randomRIO (0, max 0 $ length solution - 1)
   return $ if pos < next
            then swapElementsAt pos next solution
            else if pos == next then solution
                 else swapElementsAt next pos solution
-    
 
+swapSuccessor :: RandomGen g => g -> Solution -> (g, Solution)
+swapSuccessor g solution = (gen', nextSol)
+  where
+    (pos, g')    = randomR (0, max 0 $ length solution - 1) g
+    (next, gen') = randomR (0, max 0 $ length solution - 1) g'
+    nextSol = if pos < next
+              then swapElementsAt pos next solution
+              else if pos == next then solution
+                   else swapElementsAt next pos solution
+
+tspFitness :: Cities -> FitnessFunction Solution
+tspFitness cities = eval cities
+
+tspBreeding :: (RandomGen g) => BreedingStrategy Solution g 
+tspBreeding g = mapAccumL swapSuccessor g
+
+
+getEA :: Cities -> IO (EA Solution StdGen)
+getEA cities = do
+  initSols <- replicateM 50 (successor ([0..(length cities - 1)]))
+  return $ EA initSols fitnessProp (tspFitness cities) (elitist tspBreeding)
+  
 swapElementsAt :: Int -> Int -> [a] -> [a]
 swapElementsAt i j xs = let elemI = xs !! i
                             elemJ = xs !! j
@@ -113,3 +163,4 @@ getCSV path = do
 toLocation :: [Double] -> Location
 toLocation (x:y:_) = Location (x,y)
 toLocation _ = undefined
+
