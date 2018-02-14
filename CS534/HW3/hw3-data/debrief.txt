@@ -1,0 +1,11 @@
+\section{Debrief}
+This section is duplicated in included file debrief.txt and in latex document.
+
+\subsection{Hours Spent on Assignment}
+Including the writeup and catching up on the material, this assignment took about 4 hours.
+\subsection{Difficulty}
+I would rate this assignment as easy. With regards to the extent of provided code, I think it is appropriate when the provided code removes boiler plate or non-ML tasks. The Viterbi solution, however, seems a crucial part of POS tagging. With that code provided, this assignment was basically just another rehash of perceptron.
+\subsection{Lecture Speed}
+When teaching, just right. However, the bulk of lectures seems to be review of some kind.
+\subsection{Other Comments}
+No comment.
